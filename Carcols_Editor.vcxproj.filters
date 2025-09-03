@@ -62,6 +62,7 @@
     </ClInclude>
     <ClInclude Include="d3dhook.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="util.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="include\imgui\imgui.cpp">
@@ -107,5 +108,6 @@
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="ui.cpp" />
+    <ClCompile Include="util.cpp" />
   </ItemGroup>
 </Project>

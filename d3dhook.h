@@ -4,50 +4,29 @@
 
 class D3dHook {
 private:
-    using f_EndScene = HRESULT(CALLBACK*)(IDirect3DDevice9*);
-    using f_Present = HRESULT(CALLBACK*)(IDXGISwapChain*, UINT, UINT);
-    using f_Reset = HRESULT(CALLBACK*)(IDirect3DDevice9*, D3DPRESENT_PARAMETERS*);
-    using f_SetCursorPos = BOOL(CALLBACK*)(int, int);
-    using f_ShowCursor = BOOL(CALLBACK*)(bool);
+    using EndSceneFn = HRESULT(CALLBACK*)(IDirect3DDevice9*);
+    using ResetFn = HRESULT(CALLBACK*)(IDirect3DDevice9*, D3DPRESENT_PARAMETERS*);
 
-    static inline WNDPROC oWndProc;
-    static inline f_Present oPresent;
-    static inline f_EndScene oEndScene;
-    static inline f_SetCursorPos oSetCursorPos;
-    static inline f_ShowCursor oShowCursor;
-    static inline f_Reset oReset;
-    static inline bool mouseShown;
-    static inline std::function<void()> pCallbackFunc = nullptr;
+    static inline WNDPROC          ogWndProc = nullptr;
+    static inline EndSceneFn       ogEndScene = nullptr;
+    static inline ResetFn          ogReset = nullptr;
+    static inline bool             bMouseVisible = false;
+    static inline bool             bInitialized = false;
+    static inline std::function<void()> renderFn = nullptr;
 
-    static void CALLBACK ProcessFrame(void* ptr);
-    static LRESULT CALLBACK hkWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    // Hooks
+    static LRESULT CALLBACK WndProcHook(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    static HRESULT CALLBACK EndSceneHook(IDirect3DDevice9* device);
+    static HRESULT CALLBACK ResetHook(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* params);
+
     static void ProcessMouse();
-
-    static BOOL CALLBACK hkSetCursorPos(int, int);
-    static BOOL CALLBACK hkShowCursor(bool);
-
-    // DirectX9
-    static HRESULT CALLBACK hkEndScene(IDirect3DDevice9* pDevice);
-    static HRESULT CALLBACK hkReset(IDirect3DDevice9* pDevice, D3DPRESENT_PARAMETERS* pPresentationParameters);
-
-    // DirectX11, Renderhook
-    static HRESULT CALLBACK hkPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags);
+    static void InitImGui(IDirect3DDevice9* device);
+    static void ShutdownImGui();
 
 public:
+    static bool IsCursorVisible();
+    static void SetCursorVisible(bool visible);
 
-    D3dHook() = delete;
-    D3dHook(D3dHook const&) = delete;
-    void operator=(D3dHook const&) = delete;
-
-    // Returns the current mouse visibility state
-    static bool GetMouseState();
-
-    // Injects game hooks & stuff
-    static bool Init(std::function<void()> pCallback);
-
-    // Sets the current mouse visibility state
-    static void SetMouseState(bool state);
-
-    // Cleans up hooks
+    static void Init(std::function<void()> callback);
     static void Shutdown();
 };

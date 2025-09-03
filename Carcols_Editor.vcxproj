@@ -156,6 +156,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug GTASA|Win32'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="ui.cpp" />
+    <ClCompile Include="util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="d3dhook.h" />
@@ -176,6 +177,7 @@
     <ClInclude Include="include\kiero\minhook\MinHook.h" />
     <ClInclude Include="include\kiero\minhook\trampoline.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

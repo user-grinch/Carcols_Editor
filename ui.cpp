@@ -2,6 +2,8 @@
 #include <CVehicleModelInfo.h>
 #include "d3dhook.h"
 #include <fstream>
+#include <map>
+#include "util.h"
 
 int MAX_COLORS = 128;
 int MAX_COLORS_PER_VEHICLE = 8;
@@ -14,7 +16,7 @@ void ShowColorPaletteTab() {
         CRGBA& color = CVehicleModelInfo::ms_vehicleColourTable[i];
         float col[3] = { color.r / 255.0f, color.g / 255.0f, color.b / 255.0f };
 
-        ImGui::SetNextItemWidth(CalcSize(2, true).x);
+        ImGui::SetNextItemWidth(Util::CalcSize(2, true).x);
         if (ImGui::ColorEdit3(std::format("Color {}", i).c_str(), col, ImGuiColorEditFlags_NoInputs)) {
             color.r = static_cast<unsigned char>(col[0] * 255);
             color.g = static_cast<unsigned char>(col[1] * 255);
@@ -45,12 +47,15 @@ void ShowCurrentVehicleColorsTab(CVehicleModelInfo* pModelInfo) {
     for (size_t i = 0; i < pModelInfo->m_nNumColorVariations; i++) {
         unsigned char& primaryId = pModelInfo->m_anPrimaryColors[i];
         unsigned char& secondaryId = pModelInfo->m_anSecondaryColors[i];
+        unsigned char& tertiaryId = pModelInfo->m_anTertiaryColors[i];
 
         CRGBA primaryColor = CVehicleModelInfo::ms_vehicleColourTable[primaryId];
         CRGBA secondaryColor = CVehicleModelInfo::ms_vehicleColourTable[secondaryId];
+        CRGBA tertiaryColor = CVehicleModelInfo::ms_vehicleColourTable[tertiaryId];
 
         ImVec4 primaryVec = { primaryColor.r / 255.0f, primaryColor.g / 255.0f, primaryColor.b / 255.0f, 1.0f };
         ImVec4 secondaryVec = { secondaryColor.r / 255.0f, secondaryColor.g / 255.0f, secondaryColor.b / 255.0f, 1.0f };
+        ImVec4 tertiaryVec = { tertiaryColor.r / 255.0f, tertiaryColor.g / 255.0f, tertiaryColor.b / 255.0f, 1.0f };
 
         // Primary
         ImGui::ColorButton(std::format("##Primary{}", i).c_str(), primaryVec, ImGuiColorEditFlags_NoTooltip, ImVec2(40, 20));
@@ -62,6 +67,12 @@ void ShowCurrentVehicleColorsTab(CVehicleModelInfo* pModelInfo) {
         ImGui::ColorButton(std::format("##Secondary{}", i).c_str(), secondaryVec, ImGuiColorEditFlags_NoTooltip, ImVec2(40, 20));
         ImGui::SameLine();
         ImGui::Text("ID: %d", secondaryId);
+
+        //// Tertiary
+        //ImGui::NextColumn();
+        //ImGui::ColorButton(std::format("##Tertiary{}", i).c_str(), tertiaryVec, ImGuiColorEditFlags_NoTooltip, ImVec2(40, 20));
+        //ImGui::SameLine();
+        //ImGui::Text("ID: %d", tertiaryId);
 
         // Actions
         ImGui::NextColumn();
@@ -133,6 +144,8 @@ void ShowCurrentVehicleColorsTab(CVehicleModelInfo* pModelInfo) {
         ImGui::Text("Color slots full");
     }
 }
+
+extern std::map<int, std::string> store;
 void GenerateCarcol() {
     std::ofstream out(GAME_PATH("carcols.dat"), std::ios::trunc);
     out << "# Carcols.dat file generated using CarcolsEditor by Grinch_\n\ncol\n";
@@ -147,15 +160,12 @@ void GenerateCarcol() {
         CBaseModelInfo* modelInfo = CModelInfo::GetModelInfo(id);
         if (modelInfo && (int)modelInfo > 0xFFFF && modelInfo->GetModelType() == MODEL_INFO_VEHICLE) {
             CVehicleModelInfo* pInfo = reinterpret_cast<CVehicleModelInfo*>(modelInfo);
-            const char* name = (const char*)CModelInfo::GetModelInfo(id) + 0x32;
 
-            if (name && std::isprint(name[0])) {
-                out << name << ", ";
-                for (int i = 0; i < pInfo->m_nNumColorVariations; i++) {
-                    out << (int)pInfo->m_anPrimaryColors[i] << ", " << (int)pInfo->m_anSecondaryColors[i] << ", ";
-                }
-                out << "\n";
+            out << store[id] << ", ";
+            for (int i = 0; i < pInfo->m_nNumColorVariations; i++) {
+                out << (int)pInfo->m_anPrimaryColors[i] << ", " << (int)pInfo->m_anSecondaryColors[i] << ", ";
             }
+            out << "\n";
         }
     }
     out << "end" << std::endl;
@@ -168,16 +178,12 @@ void ShowSettingsTab() {
 }
 
 void CarcolsEditorUI() {
-    if (plugin::KeyPressed(VK_F6)) {
-        gEditorVisible = !gEditorVisible;
-    }
-
     D3dHook::SetMouseState(gEditorVisible);
 
     if (!gEditorVisible || !ImGui::Begin(MOD_NAME"by Grinch_", &gEditorVisible, ImGuiWindowFlags_NoCollapse))
         return;
 
-    ImVec2 sz = CalcSize(2, true);
+    ImVec2 sz = Util::CalcSize(2, true);
     if (ImGui::Button("Reload carcols.dat", sz)) {
         plugin::Call<0x5B6890>();
     }
