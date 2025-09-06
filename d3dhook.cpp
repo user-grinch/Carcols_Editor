@@ -3,6 +3,7 @@
 #include "kiero/kiero.h"
 #include "imgui/imgui_impl_dx9.h"
 #include "imgui/imgui_impl_win32.h"
+#include <CMenuManager.h>
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -29,6 +30,12 @@ HRESULT D3dHook::ResetHook(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* para
     return ogReset(device, params);
 }
 
+float UpdateScaling(HWND hwnd) {
+    float scale = std::min(plugin::screen::GetScreenHeight() / 1080, plugin::screen::GetScreenWidth() / 1920);
+    ImGui::GetStyle().ScaleAllSizes(std::ceil(scale));
+    return scale * 20.0f;
+}
+
 HRESULT D3dHook::EndSceneHook(IDirect3DDevice9* device) {
     static bool imguiInitialized = false;
 
@@ -38,22 +45,33 @@ HRESULT D3dHook::EndSceneHook(IDirect3DDevice9* device) {
     }
 
     ImGuiIO& io = ImGui::GetIO();
-    ProcessMouse();
+    if (!FrontEndMenuManager.m_bMenuActive) {
+        ProcessMouse();
 
-    ImGui_ImplWin32_NewFrame();
-    ImGui_ImplDX9_NewFrame();
-    ImGui::NewFrame();
+        ImGui_ImplWin32_NewFrame();
+        ImGui_ImplDX9_NewFrame();
+        ImGui::NewFrame();
 
-    if (renderFn) {
-        renderFn();
+        ImGui::PushFont(NULL, UpdateScaling(RsGlobal.ps->window));
+
+        if (renderFn) {
+            renderFn();
+        }
+
+        ImGui::PopFont();
+
+        io.MouseDrawCursor = bMouseVisible;
+
+        ImGui::EndFrame();
+        ImGui::Render();
+        ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
     }
-
-    io.MouseDrawCursor = bMouseVisible;
-
-    ImGui::EndFrame();
-    ImGui::Render();
-    ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
-
+    else {
+        bool temp = bMouseVisible;
+        io.MouseDrawCursor = bMouseVisible = false;
+        ProcessMouse();
+        bMouseVisible = temp;
+    }
     return ogEndScene(device);
 }
 
@@ -64,10 +82,9 @@ void D3dHook::InitImGui(IDirect3DDevice9* device) {
     ImGui_ImplWin32_EnableDpiAwareness();
 
     ImGuiIO& io = ImGui::GetIO();
-    io.IniFilename = MOD_NAME ".ini";
-    io.LogFilename = MOD_NAME ".log";
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-
+    io.IniFilename = NULL;
+    io.LogFilename = NULL;
+    io.FontDefault = io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeui.ttf", 20.0f);
     ogWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtr(RsGlobal.ps->window, GWL_WNDPROC, reinterpret_cast<LONG_PTR>(WndProcHook)));
     plugin::patch::Nop(0x00531155, 5); // shift trigger fix
 }

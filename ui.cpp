@@ -1,219 +1,215 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include <CVehicleModelInfo.h>
 #include "d3dhook.h"
-#include <fstream>
-#include <map>
 #include "util.h"
+#include <imgui/imgui_internal.h>
+#include "defines.h"
+#include <CHud.h>
 
-int MAX_COLORS = 128;
-int MAX_COLORS_PER_VEHICLE = 8;
-int MAX_VEHICLE_ID = 20000;
+extern bool gEditorVisible;
 
-void ShowColorPaletteTab() {
-    ImGui::BeginChild(__FUNCTION__);
-    ImGui::Columns(2, nullptr, false);
-    for (int i = 0; i < MAX_COLORS; ++i) {
-        CRGBA& color = CVehicleModelInfo::ms_vehicleColourTable[i];
-        float col[3] = { color.r / 255.0f, color.g / 255.0f, color.b / 255.0f };
+static void ShowColorPaletteTab() {
+    ImGui::Spacing();
+    ImGui::BeginChild("PaletteChild");
 
-        ImGui::SetNextItemWidth(Util::CalcSize(2, true).x);
-        if (ImGui::ColorEdit3(std::format("Color {}", i).c_str(), col, ImGuiColorEditFlags_NoInputs)) {
-            color.r = static_cast<unsigned char>(col[0] * 255);
-            color.g = static_cast<unsigned char>(col[1] * 255);
-            color.b = static_cast<unsigned char>(col[2] * 255);
+    if (ImGui::BeginTable("ColorTable", 4,
+        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+        ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY,
+        ImVec2(0, 0)))
+    {
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+        ImGui::TableSetupColumn("Color", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+        ImGui::TableSetupColumn("Color", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableHeadersRow();
+
+        for (int i = 0; i < MAX_COLORS; i += 2) {
+            ImGui::TableNextRow();
+
+            CRGBA& c1 = CVehicleModelInfo::ms_vehicleColourTable[i];
+            float col1[3] = { c1.r / 255.0f, c1.g / 255.0f, c1.b / 255.0f };
+
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("Col %03d", i);
+
+            ImGui::TableSetColumnIndex(1);
+            ImGui::PushID(i);
+            if (ImGui::ColorEdit3("##Color", col1, ImGuiColorEditFlags_NoInputs)) {
+                c1.r = static_cast<unsigned char>(col1[0] * 255.0f);
+                c1.g = static_cast<unsigned char>(col1[1] * 255.0f);
+                c1.b = static_cast<unsigned char>(col1[2] * 255.0f);
+            }
+            ImGui::PopID();
+
+            if (i + 1 < MAX_COLORS) {
+                CRGBA& c2 = CVehicleModelInfo::ms_vehicleColourTable[i + 1];
+                float col2[3] = { c2.r / 255.0f, c2.g / 255.0f, c2.b / 255.0f };
+
+                ImGui::TableSetColumnIndex(2);
+                ImGui::Text("Col %03d", i + 1);
+
+                ImGui::TableSetColumnIndex(3);
+                ImGui::PushID(i + 1);
+                if (ImGui::ColorEdit3("##Color", col2, ImGuiColorEditFlags_NoInputs)) {
+                    c2.r = static_cast<unsigned char>(col2[0] * 255.0f);
+                    c2.g = static_cast<unsigned char>(col2[1] * 255.0f);
+                    c2.b = static_cast<unsigned char>(col2[2] * 255.0f);
+                }
+                ImGui::PopID();
+            }
         }
-        ImGui::NextColumn();
+
+        ImGui::EndTable();
     }
 
-    ImGui::Columns(1);
     ImGui::EndChild();
 }
 
-void ShowCurrentVehicleColorsTab(CVehicleModelInfo* pModelInfo) {
-    ImGui::NewLine();
-    ImGui::Text("Available Variations");
-    ImGui::Separator();
 
-    ImGui::Columns(3, NULL, false);
-    ImGui::Text("Primary");
-    ImGui::NextColumn();
-    ImGui::Text("Secondary");
-    ImGui::NextColumn();
-    ImGui::Text("Actions");
-    ImGui::Columns(1);
-
-    ImGui::Columns(3, NULL, false);
-
-    for (size_t i = 0; i < pModelInfo->m_nNumColorVariations; i++) {
-        unsigned char& primaryId = pModelInfo->m_anPrimaryColors[i];
-        unsigned char& secondaryId = pModelInfo->m_anSecondaryColors[i];
-        unsigned char& tertiaryId = pModelInfo->m_anTertiaryColors[i];
-
-        CRGBA primaryColor = CVehicleModelInfo::ms_vehicleColourTable[primaryId];
-        CRGBA secondaryColor = CVehicleModelInfo::ms_vehicleColourTable[secondaryId];
-        CRGBA tertiaryColor = CVehicleModelInfo::ms_vehicleColourTable[tertiaryId];
-
-        ImVec4 primaryVec = { primaryColor.r / 255.0f, primaryColor.g / 255.0f, primaryColor.b / 255.0f, 1.0f };
-        ImVec4 secondaryVec = { secondaryColor.r / 255.0f, secondaryColor.g / 255.0f, secondaryColor.b / 255.0f, 1.0f };
-        ImVec4 tertiaryVec = { tertiaryColor.r / 255.0f, tertiaryColor.g / 255.0f, tertiaryColor.b / 255.0f, 1.0f };
-
-        // Primary
-        ImGui::ColorButton(std::format("##Primary{}", i).c_str(), primaryVec, ImGuiColorEditFlags_NoTooltip, ImVec2(40, 20));
-        ImGui::SameLine();
-        ImGui::Text("ID: %d", primaryId);
-
-        // Secondary
-        ImGui::NextColumn();
-        ImGui::ColorButton(std::format("##Secondary{}", i).c_str(), secondaryVec, ImGuiColorEditFlags_NoTooltip, ImVec2(40, 20));
-        ImGui::SameLine();
-        ImGui::Text("ID: %d", secondaryId);
-
-        //// Tertiary
-        //ImGui::NextColumn();
-        //ImGui::ColorButton(std::format("##Tertiary{}", i).c_str(), tertiaryVec, ImGuiColorEditFlags_NoTooltip, ImVec2(40, 20));
-        //ImGui::SameLine();
-        //ImGui::Text("ID: %d", tertiaryId);
-
-        // Actions
-        ImGui::NextColumn();
-        if (ImGui::Button(std::format("Delete##{}", i).c_str(), ImVec2(60, 20))) {
-            for (int j = i; j < pModelInfo->m_nNumColorVariations - 1; ++j) {
-                pModelInfo->m_anPrimaryColors[j] = pModelInfo->m_anPrimaryColors[j + 1];
-                pModelInfo->m_anSecondaryColors[j] = pModelInfo->m_anSecondaryColors[j + 1];
-            }
-            --pModelInfo->m_nNumColorVariations;
-            --i;
-        }
-        ImGui::NextColumn();
-    }
-
-    ImGui::Columns(1);
-
-    ImGui::Separator();
-
-    // Add new entry
-    static int newPrimary = 0;
-    static int newSecondary = 0;
-
-    ImGui::Text("Add New Variation");
+static void ShowCurrentVehicleColorsTab(CVehicleModelInfo* pModelInfo) {
+    ImVec2 btnSz = Util::CalcSize(2, false);
     ImGui::Spacing();
 
-    if (pModelInfo->m_nNumColorVariations < MAX_COLORS_PER_VEHICLE) {
-        if (ImGui::BeginCombo("Primary", std::format("ID {}##PrimaryLabel", newPrimary).c_str())) {
-            for (int i = 0; i < MAX_COLORS; ++i) {
-                CRGBA color = CVehicleModelInfo::ms_vehicleColourTable[i];
-                ImVec4 colorVec = { color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, 1.0f };
+    if (ImGui::Button("Add New", btnSz)) {
+        if (pModelInfo->m_nNumColorVariations < MAX_COLORS_PER_VEHICLE) {
+            const int idx = pModelInfo->m_nNumColorVariations++;
+            pModelInfo->m_anPrimaryColors[idx] = 0;
+            pModelInfo->m_anSecondaryColors[idx] = 0;
+            pModelInfo->m_anTertiaryColors[idx] = 0;
+            pModelInfo->m_anQuaternaryColors[idx] = 0;
+        }
+        else {
+            CHud::SetHelpMessage("Limit reached", false, false, false);
+        }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Remove all", btnSz)) {
+        pModelInfo->m_nNumColorVariations = 0;
+    }
 
-                ImGui::PushID(i);
-                ImGui::ColorButton("##ColorPreview", colorVec, ImGuiColorEditFlags_NoTooltip, ImVec2(20, 20));
-                ImGui::SameLine();
-                if (ImGui::Selectable(std::format("ID {}", i).c_str(), newPrimary == i)) {
-                    newPrimary = i;
+    ImGui::Spacing();
+    ImGui::Text("Used Variations: %d/%d", pModelInfo->m_nNumColorVariations, MAX_COLORS_PER_VEHICLE);
+    ImGui::Spacing();
+
+    ImGui::BeginChild("CC");
+    if (ImGui::BeginTable("VehicleColorsTable", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable)) {
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+        ImGui::TableSetupColumn("Primary / Secondary");
+        ImGui::TableSetupColumn("Tertiary / Quaternary");
+        ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+        ImGui::TableHeadersRow();
+
+        for (int i = 0; i < pModelInfo->m_nNumColorVariations; ++i) {
+            ImGui::PushID(i);
+            ImGui::TableNextRow();
+
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("%d", i);
+
+            ImGui::TableSetColumnIndex(1);
+            auto drawStackedSlot = [&](const char* label, unsigned char* pId) {
+                int id = *pId;
+                Util::ColorCombo(label, &id);
+                *pId = static_cast<unsigned char>(id);
+                };
+            drawStackedSlot(("P##" + std::to_string(i)).c_str(), &pModelInfo->m_anPrimaryColors[i]);
+            drawStackedSlot(("S##" + std::to_string(i)).c_str(), &pModelInfo->m_anSecondaryColors[i]);
+
+            ImGui::TableSetColumnIndex(2);
+            drawStackedSlot(("T##" + std::to_string(i)).c_str(), &pModelInfo->m_anTertiaryColors[i]);
+            drawStackedSlot(("Q##" + std::to_string(i)).c_str(), &pModelInfo->m_anQuaternaryColors[i]);
+
+            ImGui::TableSetColumnIndex(3);
+            if (ImGui::Button("Del")) {
+                for (int j = i; j < pModelInfo->m_nNumColorVariations - 1; ++j) {
+                    pModelInfo->m_anPrimaryColors[j] = pModelInfo->m_anPrimaryColors[j + 1];
+                    pModelInfo->m_anSecondaryColors[j] = pModelInfo->m_anSecondaryColors[j + 1];
+                    pModelInfo->m_anTertiaryColors[j] = pModelInfo->m_anTertiaryColors[j + 1];
+                    pModelInfo->m_anQuaternaryColors[j] = pModelInfo->m_anQuaternaryColors[j + 1];
                 }
-                ImGui::PopID();
+                --pModelInfo->m_nNumColorVariations;
+                --i;
             }
-            ImGui::EndCombo();
+
+            ImGui::PopID();
         }
-
-        if (ImGui::BeginCombo("Secondary", std::format("ID {}##SecondaryLabel", newSecondary).c_str())) {
-            for (int i = 0; i < MAX_COLORS; ++i) {
-                CRGBA color = CVehicleModelInfo::ms_vehicleColourTable[i];
-                ImVec4 colorVec = { color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, 1.0f };
-
-                ImGui::PushID(1000 + i);
-                ImGui::ColorButton("##ColorPreview", colorVec, ImGuiColorEditFlags_NoTooltip, ImVec2(20, 20));
-                ImGui::SameLine();
-                if (ImGui::Selectable(std::format("ID {}", i).c_str(), newSecondary == i)) {
-                    newSecondary = i;
-                }
-                ImGui::PopID();
-            }
-            ImGui::EndCombo();
-        }
-
-        ImGui::Spacing();
-
-        if (ImGui::Button("Add Color Variation")) {
-            int idx = pModelInfo->m_nNumColorVariations;
-            pModelInfo->m_anPrimaryColors[idx] = static_cast<unsigned char>(newPrimary);
-            pModelInfo->m_anSecondaryColors[idx] = static_cast<unsigned char>(newSecondary);
-            ++pModelInfo->m_nNumColorVariations;
-        }
+        ImGui::EndTable();
     }
-    else {
-        ImGui::Text("Color slots full");
-    }
+    ImGui::EndChild();
 }
 
-extern std::map<int, std::string> store;
-void GenerateCarcol() {
-    std::ofstream out(GAME_PATH("carcols.dat"), std::ios::trunc);
-    out << "# Carcols.dat file generated using CarcolsEditor by Grinch_\n\ncol\n";
+static void ShowSettingsTab() {
+    ImGui::Spacing();
+    
+    ImGui::BeginChild("SettingsPanel", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysUseWindowPadding);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(10, 8));
+    ImGui::Columns(2, nullptr, false);
 
-    for (int i = 0; i < MAX_COLORS; i++) {
-        CRGBA col = CVehicleModelInfo::ms_vehicleColourTable[i];
-        out << (int)col.r << ", " << (int)col.g << ", " << (int)col.b << "\n";
-    }
-    out << "end\ncar\n";
+    ImGui::Text("Palette size:");
+    ImGui::NextColumn();
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputInt("##PaletteSize", &MAX_COLORS);
+    ImGui::NextColumn();
 
-    for (int id = 0; id <= MAX_VEHICLE_ID; id++) {
-        CBaseModelInfo* modelInfo = CModelInfo::GetModelInfo(id);
-        if (modelInfo && (int)modelInfo > 0xFFFF && modelInfo->GetModelType() == MODEL_INFO_VEHICLE) {
-            CVehicleModelInfo* pInfo = reinterpret_cast<CVehicleModelInfo*>(modelInfo);
+    ImGui::Text("Max variations per vehicle:");
+    ImGui::NextColumn();
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputInt("##MaxVariations", &MAX_COLORS_PER_VEHICLE);
+    ImGui::NextColumn();
 
-            out << store[id] << ", ";
-            for (int i = 0; i < pInfo->m_nNumColorVariations; i++) {
-                out << (int)pInfo->m_anPrimaryColors[i] << ", " << (int)pInfo->m_anSecondaryColors[i] << ", ";
-            }
-            out << "\n";
-        }
-    }
-    out << "end" << std::endl;
+    ImGui::Text("Max vehicle ID:");
+    ImGui::NextColumn();
+    ImGui::SetNextItemWidth(-1);
+    ImGui::InputInt("##MaxVehicleID", &MAX_VEHICLE_ID);
+
+    ImGui::Columns(1);
+    ImGui::PopStyleVar();
+
+    ImGui::EndChild();
 }
 
-void ShowSettingsTab() {
-    ImGui::InputInt("Carcol colors", &MAX_COLORS);
-    ImGui::InputInt("Colors per vehicle", &MAX_COLORS_PER_VEHICLE);
-    ImGui::InputInt("Max Veh ID", &MAX_VEHICLE_ID);
-}
 
 void CarcolsEditorUI() {
-    D3dHook::SetMouseState(gEditorVisible);
+    D3dHook::SetCursorVisible(gEditorVisible);
 
-    if (!gEditorVisible || !ImGui::Begin(MOD_NAME"by Grinch_", &gEditorVisible, ImGuiWindowFlags_NoCollapse))
+    ImGui::SetNextWindowSize(ImVec2(450, 800), ImGuiCond_Once);
+    if (!gEditorVisible || !ImGui::Begin(MOD_NAME " by Grinch_", &gEditorVisible, ImGuiWindowFlags_NoCollapse)) {
         return;
+    }
 
-    ImVec2 sz = Util::CalcSize(2, true);
-    if (ImGui::Button("Reload carcols.dat", sz)) {
+    if (ImGui::Button("Reload carcols.dat", Util::CalcSize(2))) {
         plugin::Call<0x5B6890>();
     }
     ImGui::SameLine();
-    if (ImGui::Button("Generate carcols.dat", sz)) {
-        GenerateCarcol();
+    if (ImGui::Button("Generate carcols.dat", Util::CalcSize(2))) {
+        Util::GenerateCarcol();
     }
-    ImGui::NewLine();
-    if (ImGui::BeginTabBar("MainTab")) {
-        // Palette Tab
-        if (ImGui::BeginTabItem("Palette")) {
+    ImGui::Spacing();
+
+    if (ImGui::BeginTabBar("MainTab", ImGuiTabBarFlags_Reorderable)) {
+        if (ImGui::BeginTabItem("Color Palette")) {
             ShowColorPaletteTab();
             ImGui::EndTabItem();
         }
 
-        // Current Vehicle Tab
-        CVehicle* pVeh = FindPlayerVehicle();
-        if (pVeh) {
-            CVehicleModelInfo* pModelInfo = static_cast<CVehicleModelInfo*>(CModelInfo::GetModelInfo(pVeh->m_nModelIndex));
-            if (pModelInfo && ImGui::BeginTabItem("CurrentVehicle")) {
+        if (ImGui::BeginTabItem("Current Vehicle")) {
+            CVehicle* pVeh = FindPlayerVehicle();
+            if (pVeh) {
+                auto* pModelInfo = static_cast<CVehicleModelInfo*>(CModelInfo::GetModelInfo(pVeh->m_nModelIndex));
                 ShowCurrentVehicleColorsTab(pModelInfo);
-                ImGui::EndTabItem();
             }
+            else {
+                ImGui::Text("Player NOT inside a vehicle.");
+            }
+            ImGui::EndTabItem();
         }
 
         if (ImGui::BeginTabItem("Settings")) {
             ShowSettingsTab();
             ImGui::EndTabItem();
         }
-
         ImGui::EndTabBar();
     }
 

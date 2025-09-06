@@ -37,9 +37,12 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved) {
             };
 
             plugin::Events::processScriptsEvent += []() {
-                if (plugin::KeyPressed(VK_F8)) {
+                static bool wasDown = false;
+                bool isDown = plugin::KeyPressed(VK_F8);
+                if (wasDown && !isDown) {
                     gEditorVisible = !gEditorVisible;
                 }
+                wasDown = isDown;
             };
         }
         else {

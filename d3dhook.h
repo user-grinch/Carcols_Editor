@@ -22,6 +22,7 @@ private:
     static void ProcessMouse();
     static void InitImGui(IDirect3DDevice9* device);
     static void ShutdownImGui();
+    static void RefreshFonts();
 
 public:
     static bool IsCursorVisible();
