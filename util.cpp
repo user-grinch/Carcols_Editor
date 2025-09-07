@@ -3,6 +3,7 @@
 #include <fstream>
 #include <map>
 #include <vector>
+#include <filesystem>
 
 ImVec2 Util::CalcSize(short count, bool spacing) {
     if (count == 1) {
@@ -54,7 +55,14 @@ bool Util::ColorCombo(const char* label, int* pOutId) {
 
 extern std::map<int, std::string> store;
 void Util::GenerateCarcol() {
-    std::ofstream out(GAME_PATH("carcols.dat"), std::ios::trunc);
+    const std::string carcolPath = GAME_PATH("data/carcols.dat");
+    const std::string backupPath = carcolPath + ".backup";
+
+    if (std::filesystem::exists(carcolPath)) {
+        std::filesystem::rename(carcolPath, backupPath);
+    }
+
+    std::ofstream out(carcolPath, std::ios::trunc);
     out << "# Carcols.dat file generated using CarcolsEditor by Grinch_\n\ncol\n";
 
     for (int i = 0; i < MAX_COLORS; i++) {
@@ -62,7 +70,7 @@ void Util::GenerateCarcol() {
         out << (int)col.r << ", " << (int)col.g << ", " << (int)col.b << "\n";
     }
 
-    out << "end\ncar4\n";
+    out << "end\n\ncar4\n";
 
     for (int id = 0; id <= MAX_VEHICLE_ID; id++) {
         CBaseModelInfo* base = CModelInfo::GetModelInfo(id);
@@ -74,13 +82,14 @@ void Util::GenerateCarcol() {
             out << name << ", ";
             for (int i = 0; i < pInfo->m_nNumColorVariations; ++i) {
                 out << (int)pInfo->m_anPrimaryColors[i] << ", "
-                    << (int)pInfo->m_anSecondaryColors[i];
-                out << ", " << (int)pInfo->m_anTertiaryColors[i];
-                out << ", " << (int)pInfo->m_anQuaternaryColors[i];
+                    << (int)pInfo->m_anSecondaryColors[i] << ", "
+                    << (int)pInfo->m_anTertiaryColors[i] << ", "
+                    << (int)pInfo->m_anQuaternaryColors[i];
                 if (i != pInfo->m_nNumColorVariations - 1) out << ", ";
             }
             out << "\n";
         }
     }
+
     out << "end" << std::endl;
 }
