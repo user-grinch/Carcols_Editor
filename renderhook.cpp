@@ -1,20 +1,20 @@
 #include "pch.h"
-#include "d3dhook.h"
+#include "renderhook.h"
 #include "imgui/imgui_impl_win32.h"
 #include "imgui/imgui_impl_rw.h"
 #include <CMenuManager.h>
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-bool D3dHook::IsCursorVisible() {
+bool RenderHook::IsCursorVisible() {
     return bMouseVisible;
 }
 
-void D3dHook::SetCursorVisible(bool visible) {
+void RenderHook::SetCursorVisible(bool visible) {
     bMouseVisible = visible;
 }
 
-LRESULT D3dHook::WndProcHook(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+LRESULT RenderHook::WndProcHook(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam);
 
     if (ImGui::GetIO().WantTextInput) {
@@ -30,7 +30,7 @@ float UpdateScaling(HWND hwnd) {
     return scale * 20.0f;
 }
 
-void D3dHook::RenderImGui() {
+void RenderHook::RenderImGui() {
     static bool imguiInitialized = false;
 
     if (!imguiInitialized) {
@@ -68,7 +68,7 @@ void D3dHook::RenderImGui() {
     }
 }
 
-void D3dHook::InitImGui() {
+void RenderHook::InitImGui() {
     ImGui::CreateContext();
     ImGui_ImplWin32_Init(RsGlobal.ps->window);
     ImGui_ImplRW_Init();
@@ -82,7 +82,7 @@ void D3dHook::InitImGui() {
     plugin::patch::Nop(0x00531155, 5); // shift trigger fix
 }
 
-void D3dHook::ShutdownImGui() {
+void RenderHook::ShutdownImGui() {
     if (ogWndProc) {
         SetWindowLongPtr(RsGlobal.ps->window, GWL_WNDPROC, reinterpret_cast<LONG_PTR>(ogWndProc));
         ogWndProc = nullptr;
@@ -92,7 +92,7 @@ void D3dHook::ShutdownImGui() {
     ImGui::DestroyContext();
 }
 
-void D3dHook::ProcessMouse() {
+void RenderHook::ProcessMouse() {
     static bool lastMouseState = false;
 
     bool isController = plugin::patch::Get<BYTE>(0xBA6818);
@@ -134,7 +134,7 @@ void D3dHook::ProcessMouse() {
     lastMouseState = bMouseVisible;
 }
 
-void D3dHook::Init(std::function<void()> callback) {
+void RenderHook::Init(std::function<void()> callback) {
     if (bInitialized) {
         return;
     }
@@ -152,7 +152,7 @@ void D3dHook::Init(std::function<void()> callback) {
     bInitialized = true;
 }
 
-void D3dHook::Shutdown() {
+void RenderHook::Shutdown() {
     if (!bInitialized) {
         return;
     }

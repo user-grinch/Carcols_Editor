@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "d3dhook.h"
+#include "renderhook.h"
 #include <map>
 
 extern void CarcolsEditorUI();
@@ -33,7 +33,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved) {
             };
             
             plugin::Events::initGameEvent += []() {
-                D3dHook::Init(CarcolsEditorUI);
+                RenderHook::Init(CarcolsEditorUI);
             };
 
             plugin::Events::processScriptsEvent += []() {

@@ -2,8 +2,8 @@
 #include "pch.h"
 #include <functional>
 
-class D3dHook {
-public:
+class RenderHook {
+private:
 
     static inline WNDPROC          ogWndProc = nullptr;
     static inline bool             bMouseVisible = false;
