@@ -1,8 +1,7 @@
 #include "pch.h"
 #include "d3dhook.h"
-#include "kiero/kiero.h"
-#include "imgui/imgui_impl_dx9.h"
 #include "imgui/imgui_impl_win32.h"
+#include "imgui/imgui_impl_rw.h"
 #include <CMenuManager.h>
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -25,22 +24,17 @@ LRESULT D3dHook::WndProcHook(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     return CallWindowProc(ogWndProc, hWnd, uMsg, wParam, lParam);
 }
 
-HRESULT D3dHook::ResetHook(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* params) {
-    ImGui_ImplDX9_InvalidateDeviceObjects();
-    return ogReset(device, params);
-}
-
 float UpdateScaling(HWND hwnd) {
     float scale = std::min(plugin::screen::GetScreenHeight() / 1080, plugin::screen::GetScreenWidth() / 1920);
     ImGui::GetStyle().ScaleAllSizes(std::ceil(scale));
     return scale * 20.0f;
 }
 
-HRESULT D3dHook::EndSceneHook(IDirect3DDevice9* device) {
+void D3dHook::RenderImGui() {
     static bool imguiInitialized = false;
 
     if (!imguiInitialized) {
-        InitImGui(device);
+        InitImGui();
         imguiInitialized = true;
     }
 
@@ -49,7 +43,7 @@ HRESULT D3dHook::EndSceneHook(IDirect3DDevice9* device) {
         ProcessMouse();
 
         ImGui_ImplWin32_NewFrame();
-        ImGui_ImplDX9_NewFrame();
+        ImGui_ImplRW_NewFrame();
         ImGui::NewFrame();
 
         ImGui::PushFont(NULL, UpdateScaling(RsGlobal.ps->window));
@@ -64,7 +58,7 @@ HRESULT D3dHook::EndSceneHook(IDirect3DDevice9* device) {
 
         ImGui::EndFrame();
         ImGui::Render();
-        ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+        ImGui_ImplRW_RenderDrawData(ImGui::GetDrawData());
     }
     else {
         bool temp = bMouseVisible;
@@ -72,13 +66,12 @@ HRESULT D3dHook::EndSceneHook(IDirect3DDevice9* device) {
         ProcessMouse();
         bMouseVisible = temp;
     }
-    return ogEndScene(device);
 }
 
-void D3dHook::InitImGui(IDirect3DDevice9* device) {
+void D3dHook::InitImGui() {
     ImGui::CreateContext();
     ImGui_ImplWin32_Init(RsGlobal.ps->window);
-    ImGui_ImplDX9_Init(device);
+    ImGui_ImplRW_Init();
     ImGui_ImplWin32_EnableDpiAwareness();
 
     ImGuiIO& io = ImGui::GetIO();
@@ -94,7 +87,7 @@ void D3dHook::ShutdownImGui() {
         SetWindowLongPtr(RsGlobal.ps->window, GWL_WNDPROC, reinterpret_cast<LONG_PTR>(ogWndProc));
         ogWndProc = nullptr;
     }
-    ImGui_ImplDX9_Shutdown();
+    ImGui_ImplRW_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 }
@@ -111,8 +104,9 @@ void D3dHook::ProcessMouse() {
         }
     }
 
-    if (lastMouseState == bMouseVisible)
+    if (lastMouseState == bMouseVisible) {
         return;
+    }
 
     if (bMouseVisible) {
         plugin::patch::SetUChar(0x6194A0, 0xC3);        // psSetMousePos
@@ -141,25 +135,29 @@ void D3dHook::ProcessMouse() {
 }
 
 void D3dHook::Init(std::function<void()> callback) {
-    if (bInitialized)
+    if (bInitialized) {
         return;
-
-    if (kiero::init(kiero::RenderType::D3D9) == kiero::Status::Success) {
-        kiero::bind(16, reinterpret_cast<void**>(&ogReset), ResetHook);
-        kiero::bind(42, reinterpret_cast<void**>(&ogEndScene), EndSceneHook);
     }
+
+    static plugin::CdeclEvent    <plugin::AddressList<0x53EB12, plugin::H_CALL>, plugin::PRIORITY_AFTER, plugin::ArgPickNone, void()> draw2dStuffEvent;
+    draw2dStuffEvent += []() {
+        RenderImGui();
+    };
+
+    plugin::Events::drawMenuBackgroundEvent += []() {
+        RenderImGui();
+    };
 
     renderFn = std::move(callback);
     bInitialized = true;
 }
 
 void D3dHook::Shutdown() {
-    if (!bInitialized)
+    if (!bInitialized) {
         return;
+    }
 
     renderFn = nullptr;
     ShutdownImGui();
-    kiero::shutdown();
-
     bInitialized = false;
 }
