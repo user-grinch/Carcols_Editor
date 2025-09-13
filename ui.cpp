@@ -1,6 +1,6 @@
 ﻿#include "pch.h"
 #include <CVehicleModelInfo.h>
-#include "d3dhook.h"
+#include "renderhook.h"
 #include "util.h"
 #include <imgui/imgui_internal.h>
 #include "defines.h"
@@ -172,7 +172,7 @@ static void ShowSettingsTab() {
 
 
 void CarcolsEditorUI() {
-    D3dHook::SetCursorVisible(gEditorVisible);
+    RenderHook::SetCursorVisible(gEditorVisible);
 
     ImGui::SetNextWindowSize(ImVec2(450, 800), ImGuiCond_Once);
     if (!gEditorVisible || !ImGui::Begin(MOD_NAME " by Grinch_", &gEditorVisible, ImGuiWindowFlags_NoCollapse)) {

@@ -127,7 +127,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="d3dhook.cpp">
+    <ClCompile Include="renderhook.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release GTASA|Win32'">Use</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release GTASA|Win32'">pch.h</PrecompiledHeaderFile>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug GTASA|Win32'">Use</PrecompiledHeader>
@@ -154,7 +154,7 @@
     <ClCompile Include="util.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="d3dhook.h" />
+    <ClInclude Include="renderhook.h" />
     <ClInclude Include="defines.h" />
     <ClInclude Include="include\imgui\imconfig.h" />
     <ClInclude Include="include\imgui\imgui.h" />

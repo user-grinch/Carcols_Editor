@@ -30,7 +30,7 @@
     <ClInclude Include="include\imgui\imstb_truetype.h">
       <Filter>include\imgui</Filter>
     </ClInclude>
-    <ClInclude Include="d3dhook.h" />
+    <ClInclude Include="renderhook.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="defines.h" />
@@ -57,7 +57,7 @@
     <ClCompile Include="include\imgui\imgui_widgets.cpp">
       <Filter>include\imgui</Filter>
     </ClCompile>
-    <ClCompile Include="d3dhook.cpp" />
+    <ClCompile Include="renderhook.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="ui.cpp" />
